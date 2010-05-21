@@ -1,0 +1,58 @@
+global, Label
+{
+  color: #222222;
+}
+
+ApplicationControlBar {
+
+   fillColors: #F7F7F7, #246EA0;
+   corner-radius: 0;
+   drop-shadow-enabled: false;
+
+}
+
+ToolTip{        
+    fontSize: 14; 
+    color: #222222;          
+    background-color: #F7F7F7;
+    background-alpha: 1;       
+    corner-radius: 3;
+}
+
+VRule
+{
+  strokeWidth:1;
+  strokeColor:#888888;
+}
+
+VDividedBox, HDividedBox, VBox
+{
+  horizontal-gap: 1;
+  vertical-gap: 1;
+  divider-affordance: 20;
+  divider-thickness: 8;
+}
+
+
+Container
+{
+  padding-bottom: 0;
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+}
+
+.tipStyleName
+{
+  background-color: #F7F7F7;  
+  background-alpha: 1;
+  color: #222222;
+  font-weight:bold;
+  font-size:12;
+}
+.gaugeTitle
+{
+  font-family: Verdana;
+  font-size:10;
+  color:#222222;
+}

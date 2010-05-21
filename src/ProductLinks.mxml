@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     ///////////////////////////////////////////////////////////////////////////////
+     // Licensed Materials - Property of IBM
+     // 5724-Y31
+     // (c) Copyright IBM Corporation 2007, 2009. All Rights Reserved.
+     //
+     // Note to U.S. Government Users Restricted Rights:
+     // Use, duplication or disclosure restricted by GSA ADP Schedule
+     // Contract with IBM Corp.
+     ///////////////////////////////////////////////////////////////////////////////
+-->
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml"
+         horizontalGap="1"
+         paddingBottom="0"
+         height="15">
+  <mx:Label text="Powered by"
+            paddingLeft="0"
+            paddingRight="0"
+            color="0xAAAAAA"
+            fontWeight="bold"
+            fontFamily="Verdana"
+            alpha="1"
+            height="16"
+            fontSize="9"/>
+  <mx:Image source="@Embed(source='../resources/logo15.png')"
+            alpha="0.4"
+            id="logo"
+            buttonMode="true"
+            mouseOver="{logo.alpha = 1}"
+            mouseOut="{logo.alpha = 0.4}"
+            toolTip="IBM ILOG Elixir"
+            click="{navigateToURL(new URLRequest('http://elixir.ilog.com'))}"/>
+  <mx:Label text="and"
+            paddingLeft="0"
+            paddingRight="0"
+            color="0xAAAAAA"
+            fontWeight="bold"
+            fontFamily="Verdana"
+            alpha="1"
+            height="16"
+            fontSize="9"/>
+  <mx:Image source="@Embed(source='../resources/lc15.png')"
+            alpha="0.4"
+            id="logo2"
+            buttonMode="true"
+            mouseOver="{logo2.alpha = 1}"
+            mouseOut="{logo2.alpha = 0.4}"
+            toolTip="Adobe LiveCycle Data Services"
+            click="{navigateToURL(new URLRequest('http://www.adobe.com/products/livecycle/dataservices/'))}"/>
+</mx:HBox>

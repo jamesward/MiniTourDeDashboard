@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     ///////////////////////////////////////////////////////////////////////////////
+     // Licensed Materials - Property of IBM
+     // 5724-Y31
+     // (c) Copyright IBM Corporation 2007, 2009. All Rights Reserved.
+     //
+     // Note to U.S. Government Users Restricted Rights:
+     // Use, duplication or disclosure restricted by GSA ADP Schedule
+     // Contract with IBM Corp.
+     ///////////////////////////////////////////////////////////////////////////////
+-->
+<RectangularGauge fontSize="8"
+                  height="22"
+                  width="200"
+                  xmlns="ilog.gauges.rectangular.*"
+                  xmlns:mx="http://www.adobe.com/2006/mxml"
+                  xmlns:ilog="http://www.ilog.com/2007/ilog/flex"
+                  paddingBottom="0"
+                  paddingLeft="0"
+                  paddingRight="0"
+                  paddingTop="0"
+                  visible="{includeInLayout}">
+  <mx:Script>
+    <![CDATA[
+      import ilog.gauges.TickItem;
+
+      private function lf(ti:TickItem):String
+      {
+        var val:Number = Number(ti.value);
+        if (val == 0)
+          return "1";
+        if (val == 100)
+          return "100+";
+
+        return val.toString();
+      }
+    ]]>
+  </mx:Script>
+  <scales>
+    <RectangularLinearScale minimum="0"
+                            maximum="100"
+                            majorTickInterval="25"/>
+  </scales>
+  <elements>
+    <ilog:RectangularTrackRenderer rendererColor="0x93B056"
+                                   minimum="0"
+                                   maximum="25"
+                                   startThickness="100%"
+                                   endThickness="100%"
+                                   y="12"
+                                   height="7"/>
+    <ilog:RectangularTrackRenderer rendererColor="0xF2D349"
+                                   minimum="25"
+                                   maximum="50"
+                                   startThickness="100%"
+                                   endThickness="100%"
+                                   y="12"
+                                   height="7"/>
+    <ilog:RectangularTrackRenderer rendererColor="0xFF722F"
+                                   minimum="50"
+                                   maximum="75"
+                                   startThickness="100%"
+                                   endThickness="100%"
+                                   y="12"
+                                   height="7"/>
+    <ilog:RectangularTrackRenderer rendererColor="0xC40E03"
+                                   minimum="75"
+                                   maximum="100"
+                                   startThickness="100%"
+                                   endThickness="100%"
+                                   y="12"
+                                   height="7"/>
+    <ilog:RectangularScaleRenderer majorTickLength="0%"
+                                   showMinorTicks="false"
+                                   showMajorTicks="false"
+                                   labelPlacement="leading"
+                                   labelFunction="lf"/>
+    <ilog:RectangularGaugeAsset width="100%"
+                                height="7"
+                                y="12"
+                                asset="{GlossyMask}"
+                                mode="bar"
+                                value="100"
+                                area="center"
+                                alpha="0.3">
+    </ilog:RectangularGaugeAsset>
+
+  </elements>
+</RectangularGauge>

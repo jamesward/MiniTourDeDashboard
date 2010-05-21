@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"
+                backgroundColor="0x222222"
+                backgroundGradientColors="{[0x222222, 0x0]}"
+                creationComplete="init()"
+                layout="absolute"
+                xmlns:ilog="http://www.ilog.com/2007/ilog/flex"
+                xmlns:local="*"
+                xmlns:gauges="gauges.*"
+                themeColor="0x222222"
+                >
+  <mx:Style source="../resources/tdfStyle.css"/>
+  <mx:Script>
+    <![CDATA[
+      import mx.controls.Alert;
+      import mx.managers.ToolTipManager;
+      import mx.events.DataGridEvent;
+      import mx.rpc.events.HeaderEvent;
+      import mx.events.ResizeEvent;
+      import mx.effects.Resize;
+      import mx.messaging.events.ChannelFaultEvent;
+      import mx.rpc.events.FaultEvent;
+      import mx.events.ItemClickEvent;
+      import mx.collections.SortField;
+      import mx.collections.Sort;
+      import flash.net.navigateToURL;
+      import flash.utils.getTimer;
+      import ilog.maps.MapSymbol;
+      import mx.graphics.Stroke;
+      import mx.graphics.SolidColor;
+      import mx.collections.ArrayCollection;
+      import mx.messaging.events.MessageEvent;
+      private var currentSize:int = 0;
+
+      [Bindable]
+      private var items:ArrayCollection = new ArrayCollection();
+
+      [Bindable]
+      private var hmItems:ArrayCollection = new ArrayCollection();
+
+      [Bindable]
+      private static var _sampleStats:SamplesStat = new SamplesStat();
+
+      public function get sampleStats():SamplesStat
+      {
+        return _sampleStats;
+      }
+
+      private function faultHandler(event:ChannelFaultEvent):void
+      {
+        resubscribe();
+      }
+
+      private function messageHandler(event:MessageEvent):void
+      {
+        if (event.message.body.city == null || event.message.body.city == "")
+        {
+          return;
+        }
+        var body:Object = event.message.body;
+        var hitDataItem:HitDataItem = new HitDataItem();
+        hitDataItem.city = body.city;
+        hitDataItem.country = body.country;
+        hitDataItem.timestamp = body.timestamp;
+        hitDataItem.ip = body.ip;
+        hitDataItem.lat = body.latitude;
+        hitDataItem.lon = body.longitude;
+        hitDataItem.sampleId = body.sampleId;
+        dhm.addHitRenderer(hitDataItem);
+        items.disableAutoUpdate();
+        items.addItem(hitDataItem);
+        
+        hmItems.addItem(new MinimalHMData(body.longitude, body.latitude));
+        items.enableAutoUpdate();
+        sampleStats.addHitData(hitDataItem);
+      }
+
+      private function init():void
+      {
+        ObjectsInfo.init("http://tourdeflex.adobe.com/download/objects-desktop.xml");
+        consumer.subscribe();
+      }
+
+      private var resubscribeCount:int = 0;
+
+      private function resubscribe():void
+      {
+        if (resubscribeCount == 0)
+        {
+          consumer.subscribe();
+          resubscribeCount = 15;
+        }
+        else
+          resubscribeCount--;
+      }
+
+    ]]>
+  </mx:Script>
+
+  <mx:ChannelSet id="channelSet">
+    <mx:RTMPChannel id="rtmp" url="rtmp://tourdeflex.adobe.com:2037"/>
+    <mx:AMFChannel url="http://tourdeflex.adobe.com:8080/lcds-samples/messagebroker/amflongpolling"/>
+    <mx:AMFChannel url="http://tourdeflex.adobe.com:8080/lcds-samples/messagebroker/amfpolling"/>
+  </mx:ChannelSet>
+  
+  <mx:Consumer id="consumer"
+               destination="tdf.sampleviewingfeed"
+               channelSet="{channelSet}"
+               resubscribeAttempts="-1"
+               resubscribeInterval="10000"
+               subtopic="flex"
+               message="messageHandler(event)"
+               channelFault="faultHandler(event)"/>
+
+        <local:LayeredMapHeatMap width="100%"
+                                 minHeight="0"
+                                 minWidth="0"
+                                 height="100%"
+                                 id="dhm"
+                                 resample="true"
+                                 clipToMap="true"
+                                 dataProvider="{hmItems}">
+          <local:map>
+
+            <local:World_countriesMap backgroundAlpha="0"
+                                      allowSelection="false"
+                                      allowNavigation="false"
+                                      fill="{new SolidColor(0x333333)}"
+                                      stroke="{new Stroke(0x666666)}"
+                                      id="map"
+                                      zoomableSymbols="false"/>
+          </local:map>
+          <local:heatMap>
+            <ilog:DensityHeatMap xField="lon"
+                                 yField="lat"
+                                 pointSize="10"
+                                 id="hm">
+              <ilog:colorModel>
+                <ilog:ColorModel id="cm">
+                  <ilog:ColorEntry color="0xFFFF00"
+                                   limit="0"
+                                   alpha="0.6"/>
+                  <ilog:ColorEntry color="0xE5FF03"
+                                   limit="100"
+                                   alpha="0.6"/>
+                  <ilog:ColorEntry color="0xF29F05"
+                                   limit="240"
+                                   alpha="0.6"/>
+                  <ilog:ColorEntry color="0xD90404"
+                                   limit="255"
+                                   alpha="0.6"/>
+                </ilog:ColorModel>
+              </ilog:colorModel>
+            </ilog:DensityHeatMap>
+          </local:heatMap>
+        </local:LayeredMapHeatMap>
+      
+</mx:Application>

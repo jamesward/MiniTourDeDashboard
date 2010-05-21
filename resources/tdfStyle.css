@@ -1,0 +1,96 @@
+global, Label
+{
+  color: #CECECE;
+}
+
+ToolTip{        
+    fontSize: 14; 
+    color: #FFFFFF;          
+    background-color: #222222;
+    background-alpha: 1;       
+    corner-radius: 3;
+}
+
+VRule
+{
+  strokeWidth:1;
+  strokeColor:#888888;
+}
+
+VDividedBox, HDividedBox, VBox
+{
+  horizontal-gap: 1;
+  vertical-gap: 1;
+  divider-affordance: 20;
+  divider-thickness: 8;
+}
+
+
+Container
+{
+  padding-bottom: 0;
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+}
+
+.tipStyleName
+{
+  background-color: #555555;
+  background-alpha: 1;
+  color: #CECECE;
+  font-weight:bold;
+  font-size:12;
+}
+.gaugeTitle
+{
+  font-family: Verdana;
+  font-size:10;
+  color:#CECECE;
+}
+
+DataGrid
+{
+    headerStyleName: "dataGridHeader";
+    headerColors: #888888, #222222;
+    color:#CECECE;
+    rollOverColor: #333333;
+    selectionColor: #333333;
+    disabledColor: #1e1e1e;
+    textRollOverColor:#ffffff;
+    textSelectedColor:#ffffff;
+    selectiondDisabledColor: #1e1e1e;
+    verticalGridLines: false;
+    alternatingItemColors: #151515, #111111;
+    backgroundColor: #3e3e3e;
+    borderStyle: solid;
+    borderColor:#222222;
+    borderThickness:1;
+    vertical-scroll-bar-style-name: vertScroll;    
+}
+
+RadioButton, ToggleButtonBar, Button
+{
+  textRollOverColor:#FFFFFF;
+  textSelectedColor:#F00205;
+  color:#CECECE;
+}
+
+LinkButton
+{
+  text-roll-over-color: #000000;
+}
+.dataGridHeader
+{
+    color: #cccccc;
+    textRollOverColor:#ffffff;
+    textSelectedColor:#ffffff;
+}
+
+.vertScroll
+{
+    trackColors: black, #222222;
+    border-color: #555555;
+    fill-colors: #000000, #000000;
+    highlight-fill: black, black;
+}

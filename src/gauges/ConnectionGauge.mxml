@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     ///////////////////////////////////////////////////////////////////////////////
+     // Licensed Materials - Property of IBM
+     // 5724-Y31
+     // (c) Copyright IBM Corporation 2007, 2009. All Rights Reserved.
+     //
+     // Note to U.S. Government Users Restricted Rights:
+     // Use, duplication or disclosure restricted by GSA ADP Schedule
+     // Contract with IBM Corp.
+     ///////////////////////////////////////////////////////////////////////////////
+-->
+<CircularGauge xmlns="ilog.gauges.circular.*"
+               xmlns:mx="http://www.adobe.com/2006/mxml"
+               xmlns:gauges="gauges.*"
+               xmlns:ilog="http://www.ilog.com/2007/ilog/flex"
+               paddingBottom="0"
+               paddingTop="0"
+               paddingLeft="2"
+               paddingRight="2">
+  <mx:Script>
+    <![CDATA[
+      import ilog.gauges.TickItem;
+
+      public function set value(val:Number):void
+      {
+        needle.value = val;
+      }
+
+      public function set maximum(val:Number):void
+      {
+        scale.maximum = val;
+      }
+
+      public function set majorTickInterval(val:Number):void
+      {
+        scale.majorTickInterval = val;
+      }
+
+      public function set minorTickInterval(val:Number):void
+      {
+        scale.minorTickInterval = val;
+      }
+
+      private function labelFunction(o:TickItem):String
+      {
+        if (o.value < 1000)
+          return o.value.toString();
+        else
+          return (Number(o.value) / 1000) + 'K';
+      }
+
+      override public function set title(value:String):void
+      {
+        if (value == super.title)
+          return;
+        super.title = value;
+      }
+
+      [Bindable]
+      public var innerColor:uint = 0x252222;
+
+      [Bindable]
+      public var outerColor:uint = 0x888888;
+
+      [Bindable]
+      public var tickColor:uint = 0xCECECE;
+
+      [Bindable]
+      public var tickColor2:uint = 0xFFFFFF;
+    ]]>
+  </mx:Script>
+  <scales>
+    <CircularLinearScale minimum="0"
+                         maximum="200"
+                         majorTickInterval="10"
+                         minorTickInterval="2"
+                         startAngle="230"
+                         endAngle="310"
+                         id="scale"/>
+  </scales>
+  <elements>
+    <gauges:CircularBackground1 innerColor="{innerColor}"
+                                outerColor="{outerColor}"
+                                lightAngle="45"/>
+    <ilog:CircularTrackRenderer radius="33%"
+                                startThickness="10%"
+                                endThickness="10%"
+                                minimum="0"
+                                maximum="{scale.maximum}">
+      <ilog:gradientEntries>
+        <mx:GradientEntry color="0xFFFFFF"
+                          alpha="0.8"
+                          ratio="0"/>
+        <mx:GradientEntry color="0x22CC22"
+                          alpha="0.5"
+                          ratio="0.6"/>
+        <mx:GradientEntry color="0xCC5522"
+                          alpha="0.8"
+                          ratio="0.8"/>
+        <mx:GradientEntry color="0xFF2222"
+                          alpha="0.8"
+                          ratio="1"/>
+      </ilog:gradientEntries>
+    </ilog:CircularTrackRenderer>
+    <ilog:CircularScaleRenderer radius="33%"
+                                majorTickLength="20%"
+                                majorTickWidth="1"
+                                minorTickLength="10%"
+                                minorTickWidth="1"
+                                labelRadius="101%"
+                                labelPlacement="outside"
+                                labelFontSize="16%"
+                                labelFunction="labelFunction">
+      <ilog:majorTickRenderer>
+        <mx:Component>
+          <ilog:RectangleTickRenderer>
+            <ilog:fill>
+              <mx:LinearGradient>
+                <mx:GradientEntry color="{outerDocument.tickColor}"/>
+                <mx:GradientEntry color="{outerDocument.tickColor2}"/>
+                <mx:GradientEntry color="{outerDocument.tickColor}"/>
+              </mx:LinearGradient>
+            </ilog:fill>
+          </ilog:RectangleTickRenderer>
+        </mx:Component>
+      </ilog:majorTickRenderer>
+      <ilog:minorTickRenderer>
+        <mx:Component>
+          <ilog:RectangleTickRenderer>
+            <ilog:fill>
+              <mx:LinearGradient>
+                <mx:GradientEntry color="{outerDocument.tickColor}"/>
+                <mx:GradientEntry color="{outerDocument.tickColor2}"/>
+                <mx:GradientEntry color="{outerDocument.tickColor}"/>
+              </mx:LinearGradient>
+            </ilog:fill>
+          </ilog:RectangleTickRenderer>
+        </mx:Component>
+      </ilog:minorTickRenderer>
+    </ilog:CircularScaleRenderer>
+    <gauges:Needle1 radius="30%"
+                    id="needle"
+                    value="0"/>
+    <gauges:NeedleCap1 radius="3%"/>
+    <ilog:CircularLabelRenderer text="{needle.value}"
+                                originY="79%"
+                                fontWeight="bold"
+                                labelFontSize="15%"/>
+    <ilog:CircularLabelRenderer text="Hits/mn"
+                                originY="88%"
+                                fontWeight="bold"
+                                labelFontSize="14%"
+                                fontFamily="Verdana"/>
+  </elements>
+</CircularGauge>

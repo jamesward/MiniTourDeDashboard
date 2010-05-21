@@ -1,0 +1,620 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     ///////////////////////////////////////////////////////////////////////////////
+     // Licensed Materials - Property of IBM
+     // 5724-Y31
+     // (c) Copyright IBM Corporation 2007, 2009. All Rights Reserved.
+     //
+     // Note to U.S. Government Users Restricted Rights:
+     // Use, duplication or disclosure restricted by GSA ADP Schedule
+     // Contract with IBM Corp.
+     ///////////////////////////////////////////////////////////////////////////////
+-->
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"
+                backgroundColor="0x222222"
+                backgroundGradientColors="{[0x222222, 0x0]}"
+                backgroundGradientAlphas="{[1, 0.7]}"
+                creationComplete="init()"
+                layout="absolute"
+                xmlns:ilog="http://www.ilog.com/2007/ilog/flex"
+                xmlns:local="*"
+                xmlns:gauges="gauges.*"
+                themeColor="0x222222"
+                preloader="preload.TdFPreloader"
+                viewSourceURL="srcview/index.html"
+                resize="appResize(event)">
+  <mx:Style source="../resources/tdfStyle.css"/>
+  <mx:Script>
+    <![CDATA[
+      import mx.controls.Alert;
+      import mx.managers.ToolTipManager;
+      import mx.events.DataGridEvent;
+      import mx.rpc.events.HeaderEvent;
+      import mx.events.ResizeEvent;
+      import mx.effects.Resize;
+      import mx.messaging.events.ChannelFaultEvent;
+      import mx.rpc.events.FaultEvent;
+      import mx.events.ItemClickEvent;
+      import mx.collections.SortField;
+      import mx.collections.Sort;
+      import flash.net.navigateToURL;
+      import flash.utils.getTimer;
+      import ilog.maps.MapSymbol;
+      import mx.graphics.Stroke;
+      import mx.graphics.SolidColor;
+      import mx.collections.ArrayCollection;
+      import mx.messaging.events.MessageEvent;
+      private var currentSize:int = 0;
+
+      [Bindable]
+      private var items:ArrayCollection = new ArrayCollection();
+
+      [Bindable]
+      private var hmItems:ArrayCollection = new ArrayCollection();
+
+      private var startTime:uint;
+
+      [Bindable]
+      private static var _sampleStats:SamplesStat = new SamplesStat();
+
+      public function get sampleStats():SamplesStat
+      {
+        return _sampleStats;
+      }
+
+      private function faultHandler(event:ChannelFaultEvent):void
+      {
+        resubscribe();
+      }
+
+      private function messageHandler(event:MessageEvent):void
+      {
+        if (event.message.body.city == null || event.message.body.city == "")
+        {
+          return;
+        }
+        var body:Object = event.message.body;
+        var hitDataItem:HitDataItem = new HitDataItem();
+        hitDataItem.city = body.city;
+        hitDataItem.country = body.country;
+        hitDataItem.timestamp = body.timestamp;
+        hitDataItem.ip = body.ip;
+        hitDataItem.lat = body.latitude;
+        hitDataItem.lon = body.longitude;
+        hitDataItem.sampleId = body.sampleId;
+        dhm.addHitRenderer(hitDataItem);
+        items.disableAutoUpdate();
+        items.addItem(hitDataItem);
+        if (items.length >= connectionsGrid.rowCount + 1)
+          items.removeItemAt(0);
+        hmItems.addItem(new MinimalHMData(body.longitude, body.latitude));
+        items.enableAutoUpdate();
+        connectionsGrid.verticalScrollPosition = connectionsGrid.maxVerticalScrollPosition + 1;
+        connectionsGrid.validateNow();
+        sampleStats.addHitData(hitDataItem);
+      }
+
+      private function setLastHourText(extra:String, value:Number):void
+      {
+        lastHour.text = "Hourly Hits " + extra + ": " + value;
+      }
+
+      private function clearData():void
+      {
+        startTime = getTimer();
+        hmItems.removeAll();
+        items.removeAll();
+        dhm.initLayer();
+        sampleStats.init();
+        setLastHourText('(Buffering)', 0);
+        dhm.resetCountryCount();
+      }
+
+      private function init():void
+      {
+        startTime = getTimer();
+        ObjectsInfo.init("http://tourdeflex.adobe.com/download/objects-desktop.xml");
+        consumer.subscribe();
+        var t:Timer = new Timer(1000);
+        setLastHourText("(Buffering)", 0);
+        t.addEventListener(TimerEvent.TIMER, onGaugeTimer);
+        t.start();
+        ToolTipManager.showDelay = 0;
+
+      }
+
+      private var resubscribeCount:int = 0;
+
+      private function resubscribe():void
+      {
+        if (resubscribeCount == 0)
+        {
+          consumer.subscribe();
+          resubscribeCount = 15;
+        }
+        else
+          resubscribeCount--;
+      }
+
+      private var counter:int = 0;
+
+      private function onGaugeTimer(e:TimerEvent):void
+      {
+        var time:Date = new Date(getTimer() - startTime);
+
+        lastMinute.value = sampleStats.lastMinuteHits;
+        timeElapsed.text = "Elapsed Time: " + DashboardUtils.formatDate(time, false, true);
+        var status:Boolean = sampleStats.networkStatus;
+        if (status == false)
+        {
+          resubscribe();
+        }
+        network1.visible = status;
+        network0.visible = !status;
+        totalHits.text = "Total Hits: " + sampleStats.totalHitsFormatted;
+        if (sampleStats.totalHits < 10)
+          return;
+        var est:Number;
+        if (time.time < 3600000 && time.time > 10000)
+        {
+          if (counter == 0)
+          {
+            est = int(int(sampleStats.lastHourHits * 3600000 / time.time) / 100) * 100;
+            setLastHourText('(Est.)', est);
+            counter = 5;
+          }
+          else
+            counter--;
+        }
+        else
+        {
+          setLastHourText("", sampleStats.lastHourHits);
+        }
+
+      }
+
+
+      private function datatipFF(v:Number):String
+      {
+        switch (v)
+        {
+          case 1:
+            return "Point Size: Smaller";
+          case 2:
+            return "Point Size: Small";
+          case 3:
+            return "Point Size: Normal";
+          case 4:
+            return "Point Size: Large";
+          case 5:
+            return "Point Size: Larger";
+        }
+        return "";
+      }
+
+      private function rankDGResize(event:ResizeEvent):void
+      {
+        var newW:Number = event.target.width;
+
+        if (newW < 330)
+        {
+          titleRankColumn.dataField = "title";
+          hitCountColumn.visible = false;
+
+        }
+        else
+        {
+          titleRankColumn.dataField = "fullSampleTitle";
+          hitCountColumn.visible = true;
+        }
+
+      }
+      [Bindable]
+      private var visibleBottomBox:Boolean = false;
+
+      private function appResize(event:ResizeEvent):void
+      {
+        var newH:Number = event.target.height;
+        visibleBottomBox = newH > 350;
+      }
+
+      private function connectDGResize(event:ResizeEvent):void
+      {
+        var newW:Number = event.target.width;
+
+        if (newW < 330)
+        {
+          cityColumn.visible = false;
+          titleConnectColumn.dataField = "title";
+        }
+        else
+        {
+          cityColumn.visible = true;
+          titleConnectColumn.dataField = "fullSampleTitle";
+
+        }
+      }
+
+      private function forceSorting():void
+      {
+        rankDataGrid.dispatchEvent(new DataGridEvent(DataGridEvent.HEADER_RELEASE, false, false, 2));
+        rankDataGrid.dispatchEvent(new DataGridEvent(DataGridEvent.HEADER_RELEASE, false, false, 2));
+      }
+
+      private var fullScreenListenerFlag:Boolean = true;
+
+      private function onFullScreen(e:FullScreenEvent):void
+      {
+        if (e.fullScreen)
+          fullScreenLabel.label = "Exit Full Screen Mode";
+        else
+          fullScreenLabel.label = "Full Screen Mode";
+      }
+
+      private function fullScreen():void
+      {
+        if (stage && fullScreenListenerFlag)
+        {
+          stage.addEventListener(FullScreenEvent.FULL_SCREEN, onFullScreen);
+          fullScreenListenerFlag = false;
+        }
+
+        if (stage.displayState == StageDisplayState.FULL_SCREEN)
+          stage.displayState = StageDisplayState.NORMAL;
+        else
+          stage.displayState = StageDisplayState.FULL_SCREEN;
+      }
+    ]]>
+  </mx:Script>
+
+
+  <mx:ChannelSet id="channelSet">
+    <!-- RTMP channel -->
+    <mx:RTMPChannel id="rtmp"
+                    url="rtmp://tourdeflex.adobe.com:2037"/>
+    <!-- Long Polling Channel -->
+    <mx:AMFChannel url="http://tourdeflex.adobe.com:8080/lcds-samples/messagebroker/amflongpolling"/>
+    <!-- Regular polling channel -->
+    <mx:AMFChannel url="http://tourdeflex.adobe.com:8080/lcds-samples/messagebroker/amfpolling"/>
+  </mx:ChannelSet>
+  <mx:Consumer id="consumer"
+               destination="tdf.sampleviewingfeed"
+               channelSet="{channelSet}"
+               resubscribeAttempts="-1"
+               resubscribeInterval="10000"
+               subtopic="flex"
+               message="messageHandler(event)"
+               channelFault="faultHandler(event)"/>
+  <mx:VBox width="100%"
+           height="100%"
+           paddingBottom="2"
+           paddingLeft="2"
+           paddingRight="2"
+           paddingTop="2">
+    <mx:ApplicationControlBar bottom="0"
+                              horizontalGap="6"
+                              width="100%"
+                              height="26"
+                              left="0"
+                              verticalAlign="middle"
+                              dropShadowEnabled="false"
+                              paddingLeft="2"
+                              paddingTop="2"
+                              paddingRight="2">
+      <mx:Button label="Clear Data"
+                 click="clearData()"
+                 alpha="1"
+                 fontSize="10"
+                 buttonMode="true"
+                 fontWeight="bold"
+                 height="18"
+                 cornerRadius="5"
+                 color="0x222222"/>
+      <mx:VRule height="23"/>
+      <mx:RadioButton label="Heat Map"
+                      groupName="buttonGroup"
+                      leading="0"
+                      horizontalGap="2"
+                      id="hmVisible"
+                      selected="true"
+                      paddingRight="0"
+                      valueCommit="{dhm.dhmVisible = hmVisible.selected; if (hmVisible.selected) cmVisible.selected = false;}"/>
+      <mx:HSlider width="70"
+                  thumbUpSkin="gauges.NeedleCap1"
+                  thumbDownSkin="gauges.NeedleCap1"
+                  thumbOverSkin="gauges.NeedleCap1"
+                  dataTipFormatFunction="datatipFF"
+                  dataTipStyleName="tipStyleName"
+                  id="pointSize"
+                  showTrackHighlight="true"
+                  snapInterval="1"
+                  minimum="1"
+                  maximum="5"
+                  value="3"
+                  showDataTip="true"
+                  allowTrackClick="true"
+                  dataTipOffset="5"
+                  invertThumbDirection="false"
+                  dataTipPlacement="right"
+                  change="{dhm.initLayer()}"
+                  includeInLayout="{hmVisible.selected}"
+                  visible="{hmVisible.selected}"/>
+      <mx:VRule height="23"/>
+      <mx:RadioButton label="Color Map"
+                      groupName="buttonGroup"
+                      horizontalGap="2"
+                      id="cmVisible"
+                      valueCommit="{dhm.colorMapEnabled = cmVisible.selected; if (cmVisible.selected) hmVisible.selected = false;}"/>
+      <gauges:LegendGauge includeInLayout="{cmVisible.selected}"/>
+      <mx:VRule height="23"/>
+
+      <mx:HBox width="100%"
+               horizontalAlign="right">
+        <mx:LinkButton icon="@Embed(source='../resources/fullscreen.png')"
+                       id="fullScreenLabel"
+                       label="Full Screen Mode"
+                       click="fullScreen()"
+                       horizontalGap="2"
+                       paddingRight="0"/>
+      </mx:HBox>
+
+    </mx:ApplicationControlBar>
+    <mx:VDividedBox width="100%"
+                    height="100%">
+      <mx:Canvas width="100%"
+                 height="100%"
+                 borderStyle="solid"
+                 borderColor="0x555555">
+        <local:LayeredMapHeatMap width="100%"
+                                 minHeight="0"
+                                 minWidth="0"
+                                 height="100%"
+                                 id="dhm"
+                                 resample="true"
+                                 clipToMap="true"
+                                 dataProvider="{hmItems}">
+          <local:map>
+
+            <local:World_countriesMap backgroundAlpha="0"
+                                      allowSelection="false"
+                                      allowNavigation="false"
+                                      fill="{new SolidColor(0x333333)}"
+                                      stroke="{new Stroke(0x666666)}"
+                                      id="map"
+                                      zoomableSymbols="false"/>
+          </local:map>
+          <local:heatMap>
+            <ilog:DensityHeatMap xField="lon"
+                                 yField="lat"
+                                 pointSize="{pointSize.value - 0.5}"
+                                 id="hm">
+              <ilog:colorModel>
+                <ilog:ColorModel id="cm">
+                  <ilog:ColorEntry color="0xFFFF00"
+                                   limit="0"
+                                   alpha="0.6"/>
+                  <ilog:ColorEntry color="0xE5FF03"
+                                   limit="100"
+                                   alpha="0.6"/>
+                  <ilog:ColorEntry color="0xF29F05"
+                                   limit="240"
+                                   alpha="0.6"/>
+                  <ilog:ColorEntry color="0xD90404"
+                                   limit="255"
+                                   alpha="0.6"/>
+                </ilog:ColorModel>
+              </ilog:colorModel>
+            </ilog:DensityHeatMap>
+          </local:heatMap>
+        </local:LayeredMapHeatMap>
+        <mx:ToggleButtonBar color="0x000000"
+                            height="16"
+                            alpha="0.5"
+                            left="2"
+                            top="2"
+                            itemClick="dhm.zoomMap(event.item.data)">
+          <mx:dataProvider>
+            <mx:Array>
+              <mx:Object label="World"
+                         data="world"/>
+              <mx:Object label="N. America"
+                         data="northamerica"/>
+              <mx:Object label="S. America"
+                         data="southamerica"/>
+              <mx:Object label="Asia"
+                         data="asia"/>
+              <mx:Object label="Europe"
+                         data="europe"/>
+              <mx:Object label="Africa"
+                         data="africa"/>
+              <mx:Object label="Oceania"
+                         data="australia"/>
+            </mx:Array>
+          </mx:dataProvider>
+        </mx:ToggleButtonBar>
+        <local:ProductLinks bottom="1"
+                            right="2"/>
+      </mx:Canvas>
+      <mx:HBox width="100%"
+               height="212"
+               borderStyle="solid"
+               borderColor="0x555555"
+               horizontalGap="0"
+               verticalAlign="middle"
+               id="bottomBox"
+               includeInLayout="{visibleBottomBox}"
+               visible="{visibleBottomBox}">
+        <gauges:ConnectionGauge height="96%"
+                                width="{lastMinute.height + 8}"
+                                id="lastMinute"
+                                majorTickInterval="5"
+                                minorTickInterval="1"
+                                maximum="80"
+                                titleGap="0"/>
+        <mx:HDividedBox width="100%"
+                        height="100%">
+
+          <mx:DataGrid width="100%"
+                       height="100%"
+                       dataProvider="{_sampleStats.ranks}"
+                       draggableColumns="false"
+                       id="rankDataGrid"
+                       verticalScrollPolicy="on"
+                       selectable="false"
+                       resize="rankDGResize(event)"
+                       rowHeight="18"
+                       paddingTop="0"
+                       paddingBottom="0"
+                       paddingLeft="0"
+                       paddingRight="0"
+                       creationComplete="{forceSorting()}">
+            <mx:columns>
+              <mx:DataGridColumn dataField="rank"
+                                 headerText="Rank"
+                                 width="40"
+                                 sortable="false"
+                                 paddingLeft="1"
+                                 paddingRight="0"/>
+              <mx:DataGridColumn dataField="title"
+                                 id="titleRankColumn"
+                                 headerText="Title of Sample"
+                                 paddingLeft="1"
+                                 paddingRight="0"/>
+              <mx:DataGridColumn dataField="hitcount"
+                                 id="hitCountColumn"
+                                 headerText="Hits"
+                                 width="40"
+                                 paddingLeft="1"
+                                 paddingRight="0"/>
+
+            </mx:columns>
+          </mx:DataGrid>
+          <mx:DataGrid dataProvider="{items}"
+                       draggableColumns="false"
+                       rowHeight="18"
+                       paddingTop="0"
+                       paddingBottom="0"
+                       paddingLeft="0"
+                       paddingRight="0"
+                       height="100%"
+                       width="100%"
+                       id="connectionsGrid"
+                       verticalScrollPolicy="off"
+                       rowCount="10"
+                       selectable="false"
+                       resize="connectDGResize(event)">
+            <mx:columns>
+              <mx:DataGridColumn dataField="localHour"
+                                 headerText="Time"
+                                 minWidth="64"
+                                 width="64"
+                                 sortable="false"
+                                 id="hourColumn"/>
+              <mx:DataGridColumn id="cityColumn"
+                                 minWidth="100"
+                                 width="150"
+                                 paddingLeft="0"
+                                 paddingRight="0"
+                                 sortable="false"
+                                 headerText="City">
+                <mx:itemRenderer>
+                  <mx:Component>
+                    <mx:HBox width="100%"
+                             paddingBottom="0"
+                             paddingLeft="0"
+                             paddingRight="0"
+                             paddingTop="0"
+                             horizontalGap="2"
+                             horizontalAlign="left"
+                             verticalAlign="middle"
+                             horizontalScrollPolicy="off"
+                             verticalScrollPolicy="off">
+                      <mx:Image width="18"
+                                id="flim"
+                                source="{data.flagSource}"
+                                brokenImageSkin="{null}"
+                                brokenImageBorderSkin="{null}"/>
+
+                      <mx:Label text="{data.city + ', ' + data.country}"/>
+                    </mx:HBox>
+
+                  </mx:Component>
+
+                </mx:itemRenderer>
+              </mx:DataGridColumn>
+              <mx:DataGridColumn dataField="fullSampleTitle"
+                                 id="titleConnectColumn"
+                                 headerText="Title of Sample"
+                                 width="150"
+                                 sortable="false"/>
+            </mx:columns>
+          </mx:DataGrid>
+        </mx:HDividedBox>
+      </mx:HBox>
+    </mx:VDividedBox>
+    <mx:HBox width="100%"
+             horizontalGap="5"
+             height="19"
+             paddingLeft="3"
+             backgroundColor="0x333333"
+             borderColor="0x555555"
+             borderStyle="solid"
+             backgroundAlpha="0.4"
+             verticalAlign="middle"
+             horizontalScrollPolicy="off">
+      <mx:Label color="0xCECECE"
+                id="timeElapsed"
+                text="Elapsed Time: 00:00:00"/>
+      <mx:VRule height="80%"/>
+      <mx:Label color="0xCECECE"
+                id="lastHour"/>
+      <mx:VRule height="80%"/>
+      <mx:Label color="0xCECECE"
+                id="totalHits"
+                text="Total Hits: 0"/>
+
+      <mx:HBox width="100%"
+               height="100%"
+               horizontalAlign="right"
+               horizontalGap="2"
+               paddingRight="2"
+               verticalAlign="middle"
+               horizontalScrollPolicy="off">
+        <mx:Canvas>
+          <mx:Image y="1"
+                    source="@Embed(source='../resources/tdfico.png')"/>
+          <mx:Label x="15"
+                    text="Get Tour de Flex!"
+                    textDecoration="underline"/>
+          <mx:Canvas width="100%"
+                     height="100%"
+                     buttonMode="true"
+                     click="{navigateToURL(new URLRequest('http://www.adobe.com/devnet/flex/tourdeflex/'))}"
+                     backgroundColor="0x000000"
+                     backgroundAlpha="0"/>
+
+        </mx:Canvas>
+
+        <mx:VRule height="80%"/>
+        <mx:Label text="Adobe Feed Status"
+                  color="0xCECECE"/>
+
+        <mx:Canvas width="12"
+                   height="12"
+                   horizontalScrollPolicy="off">
+          <mx:Image source="@Embed(source='../resources/net0.png')"
+                    width="12"
+                    height="12"
+                    id="network0"
+                    alpha="0.9"/>
+          <mx:Image source="@Embed(source='../resources/net1.png')"
+                    alpha="0.9"
+                    width="12"
+                    visible="false"
+                    height="12"
+                    id="network1"/>
+        </mx:Canvas>
+      </mx:HBox>
+    </mx:HBox>
+  </mx:VBox>
+</mx:Application>
